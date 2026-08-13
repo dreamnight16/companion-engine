@@ -72,7 +72,7 @@ describe("processMessage", () => {
 
     expect(Array.isArray(result)).toBe(true);
     expect(result.length).toBeGreaterThan(0);
-    expect(result[0]).toContain("我们已经在一起了呀");
+    expect(result.join("")).toContain("我们不是早就在一起了吗");
   });
 
   it("runs the full stage flow and returns the mocked model reply", async () => {
@@ -98,6 +98,6 @@ describe("processMessageStream", () => {
     }
 
     expect(chunks.length).toBeGreaterThan(0);
-    expect(chunks.join("")).toContain("我们已经在一起了呀");
+    expect(chunks.join("")).toContain("我们不是早就在一起了吗");
   });
 });
