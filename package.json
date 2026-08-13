@@ -4,18 +4,28 @@
   "description": "AI companion core engine — personality, relationship, memory, safety, pipeline, streaming, emotion model, semantic search",
   "type": "module",
   "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
-  "main": "./src/index.js",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./*": "./src/*.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "default": "./dist/*.js"
+    }
   },
   "files": [
-    "src/"
+    "dist/"
   ],
   "peerDependencies": {
     "@ai-sdk/anthropic": "^3.0.0",
@@ -39,12 +49,12 @@
   "author": "DreamNight",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sixtdreanight/companion-engine.git"
+    "url": "git+https://github.com/dreamnight16/companion-engine.git"
   },
   "bugs": {
-    "url": "https://github.com/sixtdreanight/companion-engine/issues"
+    "url": "https://github.com/dreamnight16/companion-engine/issues"
   },
-  "homepage": "https://github.com/sixtdreanight/companion-engine#readme",
+  "homepage": "https://github.com/dreamnight16/companion-engine#readme",
   "keywords": [
     "ai",
     "companion",

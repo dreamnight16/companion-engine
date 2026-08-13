@@ -4,7 +4,7 @@
 
 **AI 伴侣核心引擎 — 人格、关系、记忆、安全、消息管道。**
 
-驱动 [Yumema](https://github.com/sixtdreanight/Yumema)。
+驱动 [Yumema](https://github.com/dreamnight16/Yumema)。
 
 [![npm version](https://img.shields.io/npm/v/@sixtdreamnight/companion-engine.svg)](https://www.npmjs.com/package/@sixtdreamnight/companion-engine)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)

@@ -5,7 +5,7 @@ Thanks for your interest in contributing!
 ## Getting Started
 
 ```bash
-git clone https://github.com/sixtdreanight/companion-engine.git
+git clone https://github.com/dreamnight16/companion-engine.git
 cd companion-engine
 npm install
 npm test
@@ -57,6 +57,6 @@ Types: `feat` `fix` `refactor` `test` `docs` `chore` `perf` `ci`
 
 ## Questions?
 
-Open a [discussion](https://github.com/sixtdreanight/companion-engine/discussions).
+Open a [discussion](https://github.com/dreamnight16/companion-engine/discussions).
 
 [conv]: https://www.conventionalcommits.org/
