@@ -403,17 +403,26 @@ export async function protectSecret(plaintext: string): Promise<string> {
   if (!ss?.isEncryptionAvailable?.()) return plaintext;
   try {
     return "safe:" + ss.encryptString(plaintext).toString("base64");
-  } catch { return plaintext; }
+  } catch (err) {
+    logger.warn("Failed to encrypt secret, falling back to plaintext:", err);
+    return plaintext;
+  }
 }
 
 /** Decrypt a value protected by protectSecret. */
 export async function revealSecret(protected_: string): Promise<string> {
   if (!protected_?.startsWith("safe:")) return protected_ || "";
   const ss = await getSafeStorage();
-  if (!ss?.isEncryptionAvailable?.()) return protected_.replace("safe:", "");
+  if (!ss?.isEncryptionAvailable?.()) {
+    logger.warn("safeStorage encryption unavailable; cannot decrypt stored secret");
+    return "";
+  }
   try {
     return ss.decryptString(Buffer.from(protected_.slice(5), "base64"));
-  } catch { return protected_.replace("safe:", ""); }
+  } catch (err) {
+    logger.warn("Failed to decrypt stored secret:", err);
+    return "";
+  }
 }
 
 /** 路径 ID 消毒：防止目录穿越攻击 */

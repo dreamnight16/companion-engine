@@ -38,21 +38,21 @@ export async function saveFeedback(
   const dir = feedbackDir();
   if (!(await storage.exists(dir))) await storage.mkdir(dir, { recursive: true });
   const file = feedbackFile(userId);
-  let list: FeedbackEntry[] = [];
-  if (await storage.exists(file)) {
-    try {
-      list = JSON.parse(await storage.read(file));
-      if (!Array.isArray(list)) list = [];
-    } catch {
-      list = [];
-    }
-  }
-  list.push(entry);
-  if (list.length > MAX_FEEDBACK) list = list.slice(-MAX_FEEDBACK);
   const mutex = getOrCreateMutex(_feedbackMutexes, userId);
-  await withLock(mutex, () =>
-    storage.writeAtomic(file, JSON.stringify(list, null, 2) + "\n")
-  );
+  await withLock(mutex, async () => {
+    let list: FeedbackEntry[] = [];
+    if (await storage.exists(file)) {
+      try {
+        list = JSON.parse(await storage.read(file));
+        if (!Array.isArray(list)) list = [];
+      } catch {
+        list = [];
+      }
+    }
+    list.push(entry);
+    if (list.length > MAX_FEEDBACK) list = list.slice(-MAX_FEEDBACK);
+    await storage.writeAtomic(file, JSON.stringify(list, null, 2) + "\n");
+  });
 
   // 反馈闭环 → 调整记忆重要性
   try {

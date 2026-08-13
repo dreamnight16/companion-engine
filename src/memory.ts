@@ -179,7 +179,8 @@ export async function loadLongTerm(): Promise<LongTermMemory> {
   }
   try {
     return JSON.parse(await storage.read(ltmPath())) as LongTermMemory;
-  } catch {
+  } catch (err) {
+    logger.warn("无法读取长期记忆，返回空记忆:", err);
     return { facts: [], lastUpdated: new Date().toISOString() };
   }
 }

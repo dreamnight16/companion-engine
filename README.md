@@ -68,6 +68,19 @@ for await (const chunk of processMessageStream("Hello!", { userId: "user-1", con
 - **MBTI inference**: Personality type detection from conversation
 - **C.AI import**: Character.AI export format support
 
+## Configuration & Secrets
+
+Configuration is loaded from a `.env` file in the data root. See
+[`.env.example`](./.env.example) for the full list of supported variables and
+copy it to `.env` to get started.
+
+> **Security caveat:** `writeEnvFile()` persists the AI API key (and other
+> secrets) to `.env` in **plaintext**. Any process or Electron extension with
+> filesystem/`process.env` access can read it. For production, prefer OS
+> keychain encryption via `electron.safeStorage` (used automatically by
+> `protectSecret`/`revealSecret` in `src/config.ts`) rather than storing
+> sensitive values in `.env`.
+
 ## Peer Dependencies
 
 - `@ai-sdk/anthropic` ^3.0.0
