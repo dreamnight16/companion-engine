@@ -6,13 +6,23 @@ import { NodeStorage, type StorageAdapter, type KVStore } from "./storage.js";
 // Lazy-load electron safeStorage for OS keychain encryption.
 // Wrapped in a function to avoid static analysis by bundlers (Rollup/Vite)
 // which would fail on `await import("electron")` outside an Electron context.
-let _safeStorage: typeof import("electron").safeStorage | null = null;
+//
+// `electron` is an optional, lazily-loaded dependency (not declared in
+// package.json), so we describe only the safeStorage surface we actually use
+// instead of depending on electron's own type definitions being installed.
+interface SafeStorage {
+  isEncryptionAvailable(): boolean;
+  encryptString(plaintext: string): Buffer;
+  decryptString(encrypted: Buffer): string;
+}
+
+let _safeStorage: SafeStorage | null = null;
 let _safeStorageLoaded = false;
 async function getSafeStorage() {
   if (_safeStorageLoaded) return _safeStorage;
   _safeStorageLoaded = true;
   try {
-    const electron = await (Function("return import('electron')")()) as typeof import("electron");
+    const electron = await (Function("return import('electron')")()) as { safeStorage: SafeStorage };
     _safeStorage = electron.safeStorage;
   } catch { /* not in Electron */ }
   return _safeStorage;
