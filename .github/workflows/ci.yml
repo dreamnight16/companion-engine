@@ -30,9 +30,8 @@ jobs:
           npx vitest run
       - name: Coverage
         run: npx vitest run --coverage
-      # TODO: deps need a triage pass — surface the audit but do not block CI until vulnerable deps are upgraded
+      # High/critical vulns fixed; 2 moderate (uuid via node-cron 3.x) remain — audit gates on high+ only
       - name: npm audit
-        continue-on-error: true
         run: npm audit --audit-level=high
 
   publish:
