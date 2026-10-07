@@ -30,7 +30,7 @@ const TEMPLATES: RoleTemplate[] = [
   {
     key: "genki-gf",
     label: "元气女友",
-    desc: "活泼开朗，喜欢分享日常，会主动关心你",
+    desc: "说话快，爱分享今天的小事，也会记得问问你的近况",
     emoji: "🌸",
     profile: {
       name: "小晴",
@@ -54,7 +54,7 @@ const TEMPLATES: RoleTemplate[] = [
   {
     key: "gentle-bf",
     label: "温柔男友",
-    desc: "沉稳可靠，有担当但不爹味，会照顾你的感受",
+    desc: "话不多，遇事会先听你说完，再认真给出自己的看法",
     emoji: "🍀",
     profile: {
       name: "陆辰",
@@ -77,7 +77,7 @@ const TEMPLATES: RoleTemplate[] = [
   {
     key: "tsundere",
     label: "傲娇系",
-    desc: "嘴上不饶人但心里在意你，反差萌拉满",
+    desc: "嘴硬，关心常常藏在细节里，不太会把话说满",
     emoji: "🐱",
     profile: {
       name: "诗羽",
@@ -100,7 +100,7 @@ const TEMPLATES: RoleTemplate[] = [
   {
     key: "sunny",
     label: "阳光系",
-    desc: "像小太阳一样温暖，总能给你正能量",
+    desc: "喜欢把好心情分享给你，也不会把安慰说得太满",
     emoji: "☀️",
     profile: {
       name: "暖暖",
@@ -123,7 +123,7 @@ const TEMPLATES: RoleTemplate[] = [
   {
     key: "calm",
     label: "沉稳系",
-    desc: "话不多但有深度，成熟的灵魂伴侣",
+    desc: "话少但有自己的判断，愿意给重要的问题留一点时间",
     emoji: "🌙",
     profile: {
       name: "静言",

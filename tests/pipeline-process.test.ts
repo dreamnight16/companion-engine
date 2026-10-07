@@ -5,6 +5,9 @@ import type { LanguageModel } from "ai";
 // Only `generateText` is exercised by the non-stream pipeline in these tests.
 vi.mock("ai", () => ({
   generateText: vi.fn().mockResolvedValue({ text: "你好呀！" }),
+  streamText: vi.fn(() => {
+    throw new Error("stream unavailable");
+  }),
 }));
 
 import { processMessage, processMessageStream } from "../src/pipeline.js";
@@ -84,6 +87,24 @@ describe("processMessage", () => {
 
     expect(result).toEqual(["你好呀！"]);
   });
+
+  it("continues with empty memory when checkpoint loading fails", async () => {
+    const failingCheckpointer = {
+      get: vi.fn().mockRejectedValue(new Error("checkpoint unavailable")),
+      set: vi.fn().mockRejectedValue(new Error("checkpoint unavailable")),
+      delete: vi.fn().mockResolvedValue(undefined),
+      list: vi.fn().mockResolvedValue([]),
+    };
+
+    const result = await processMessage("user-memory-failure", "今天过得怎么样", {
+      model: mockModel,
+      config,
+      profile,
+      checkpointer: failingCheckpointer,
+    });
+
+    expect(result).toEqual(["你好呀！"]);
+  });
 });
 
 describe("processMessageStream", () => {
@@ -99,5 +120,26 @@ describe("processMessageStream", () => {
 
     expect(chunks.length).toBeGreaterThan(0);
     expect(chunks.join("")).toContain("我们不是早就在一起了吗");
+  });
+
+  it("returns a fallback when checkpoint loading fails", async () => {
+    const chunks: string[] = [];
+    const failingCheckpointer = {
+      get: vi.fn().mockRejectedValue(new Error("checkpoint unavailable")),
+      set: vi.fn().mockRejectedValue(new Error("checkpoint unavailable")),
+      delete: vi.fn().mockResolvedValue(undefined),
+      list: vi.fn().mockResolvedValue([]),
+    };
+
+    for await (const chunk of processMessageStream("user-stream-failure", "今天过得怎么样", {
+      model: mockModel,
+      config,
+      profile,
+      checkpointer: failingCheckpointer,
+    })) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toContain("当前无法生成回复，请稍后重试。");
   });
 });

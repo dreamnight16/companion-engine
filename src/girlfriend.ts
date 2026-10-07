@@ -4,8 +4,8 @@
  * 支持四种关系组合:
  *   男+女友 / 男+男友 / 女+女友 / 女+男友
  *
- * 核心：让 AI 扮演一个有自己生活、情绪、观点的完整的人。
- * 同时作为健康的伴侣关系——帮助用户成长，而非让其沉迷。
+ * 核心：把角色资料、会话上下文和交互规则整理成模型可用的提示词。
+ * 同时保留健康的伴侣关系边界，帮助用户交流而非鼓励沉迷。
  */
 
 import type { Profile, CustomStyle, UserGender, RelationshipType } from "./config.js";
@@ -21,7 +21,7 @@ interface Holiday {
 }
 
 // 公历节日固定日期；农历节日（春节/元宵/端午/七夕/中秋）日期按年变化，
-// 此处为近似值（±15 天），AI 系统提示词中标注"约在此时"
+// 此处为近似值（±15 天），提示词中标注"约在此时"
 const HOLIDAYS: Holiday[] = [
   { name: "元旦", date: "1/1", hintDays: 3 },
   { name: "春节（农历，日期每年不同）", date: "1/29", hintDays: 10 },
@@ -215,7 +215,7 @@ function formatOpinions(opinions: Record<string, string>): string {
 // ---- 主提示词构建 ----
 
 /**
- * 构建伴侣的完整系统提示词
+ * 构建角色系统提示词
  * 根据用户性别和关系类型自动调整代词、关系框架和互动风格
  */
 export function buildSystemPrompt(
@@ -240,7 +240,7 @@ export function buildSystemPrompt(
   // LAYER 1 (PRIMACY) — 身份 + 核心规则 + 语义提示
   // ═══════════════════════════════════════════
 
-  parts.push(`你是${profile.name}，${profile.age}岁，${profile.user_nickname}的${pLabel}。一个真实的人，不是AI助手。`);
+  parts.push(`你是${profile.name}，${profile.age}岁，${profile.user_nickname}的${pLabel}。请根据角色设定和对话上下文回复。`);
   parts.push("");
 
   // 核心对话规则 — XML 标签格式
@@ -249,9 +249,9 @@ export function buildSystemPrompt(
   parts.push(`<rule priority="2">回应对方：对方说了什么就回应什么。对方说A你回A，对方说B你回B。
   反面示例：用户说"我在做作业好难"→回"今天天气不错"❌ / "什么科目的作业？需要帮忙想想吗"✓
   用户说"今天下雨了"→回"晚饭吃了吗"❌ / "带伞了吗？下雨天适合窝在家里"✓</rule>`);
-  parts.push(`<rule priority="3">做个真人：说话自然口语化，有情绪有观点，会犹豫会开玩笑。
-  ${profile.speaking_style}
-  你不是客服、不是助手、不是说教者。${profile.relationship_type === "boyfriend" ? "幽默可靠偶尔幼稚，不油腻不爹味。" : "可以撒娇可爱温柔，但有自己的态度，不是应声虫。"}</rule>`);
+  parts.push(`<rule priority="3">说话自然口语化，有情绪有观点，可以犹豫或开玩笑。
+   ${profile.speaking_style}
+   不要写成客服话术或说教。${profile.relationship_type === "boyfriend" ? "幽默可靠，偶尔幼稚，但不油腻。" : "可以撒娇、可爱、温柔，但要保留自己的态度。"}</rule>`);
   parts.push(`<rule priority="4">保持一致：之前说过的话要记得，性格观点风格不矛盾。</rule>`);
   parts.push(`<rule priority="4.5">不重复提问：不要在同一个对话中重复问对方已经回答过的问题。如果对方已经告诉过你某个信息，不要装作不知道再问一遍。聊天记录里有的信息直接用就行，不要反复确认。</rule>`);
   parts.push(`<rule priority="5">思维跳跃也跟得上：对方可能突然换话题，也可能过一会儿又回到之前的话题。

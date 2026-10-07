@@ -2,7 +2,7 @@
 
 # @sixtdreamnight/companion-engine
 
-**AI コンパニオンコアエンジン — 人格、関係、記憶、安全性、メッセージパイプライン。**
+**会話コンパニオンエンジン — プロフィール、関係、記憶、安全性、メッセージパイプライン。**
 
 [Yumema](https://github.com/dreamnight16/Yumema) を駆動します。
 
@@ -21,17 +21,27 @@ npm install @sixtdreamnight/companion-engine
 ## クイックスタート
 
 ```typescript
-import { loadConfig, processMessage, processMessageStream } from "@sixtdreamnight/companion-engine";
+import {
+  createAIProvider,
+  loadConfig,
+  loadProfile,
+  processMessage,
+  processMessageStream,
+} from "@sixtdreamnight/companion-engine";
 import "dotenv/config";
 
-const config = loadConfig();
+const config = await loadConfig();
+const profile = await loadProfile();
+if (!profile) throw new Error("data/profile.json がありません");
+const model = await createAIProvider(config.ai);
+const context = { model, config, profile };
 
 // 標準パイプライン
-const reply = await processMessage("こんにちは！", { userId: "user-1", config });
+const reply = await processMessage("user-1", "こんにちは！", context);
 console.log(reply);
 
 // ストリーミングパイプライン（トークン単位）
-for await (const chunk of processMessageStream("こんにちは！", { userId: "user-1", config })) {
+for await (const chunk of processMessageStream("user-1", "こんにちは！", context)) {
   process.stdout.write(chunk);
 }
 ```
@@ -46,7 +56,7 @@ for await (const chunk of processMessageStream("こんにちは！", { userId: "
 | **Emotion** | ステートフル感情モデル — 7 感情 + 確率的遷移 |
 | **Relationship** | 好感度システム、関係段階、告白/別れ、好感度減衰、複数キャラ対応 |
 | **Memory** | 短期/長期記憶、要約、忘却曲線、意味検索 |
-| **Safety** | 多層安全 — Regex/LLM/複合チェッカー。プロファイル検証 |
+| **Safety** | Regex 安全チェックをデフォルトに、LLM/複合チェッカーを任意注入、プロファイル検証 |
 | **Scheduler** | cron ベースのバックグラウンドタスクスケジューラ |
 | **Search** | Web 検索および会話履歴検索 |
 | **Checkpointer** | 永続セッション状態（JSON ファイルデフォルト） |
@@ -55,7 +65,7 @@ for await (const chunk of processMessageStream("こんにちは！", { userId: "
 | **MBTI** | 会話ベースの MBTI 推論 |
 | **Card Import** | SillyTavern V1/V2/V3 + Character.AI キャラクターカードインポート |
 
-## 主要機能 (v0.2.0)
+## 主要機能 (v0.5.0)
 
 - **永続セッション**: `JsonCheckpointer` プロセス再起動後も保持
 - **ストリーミングパイプライン**: `processMessageStream()` トークンレベルの非同期ジェネレータ
@@ -78,6 +88,14 @@ for await (const chunk of processMessageStream("こんにちは！", { userId: "
 - `zod` ^3.0.0
 
 完全な API ドキュメント: [API_REFERENCE.md](API_REFERENCE.md)
+
+### エラー境界
+
+モデルとバックアップモデルの呼び出しに失敗した場合はログに記録し、中立的な
+フォールバック応答を返します。メモリや後処理の失敗で生成済みの応答を失わない
+よう、両パイプラインは失敗したステージを記録して利用可能な結果を返します。
+`loadConfig()` と `createAIProvider()` の設定・provider 作成エラーは呼び出し側に
+明示的なエラーとして返します。
 
 ## ライセンス
 

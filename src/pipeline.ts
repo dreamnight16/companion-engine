@@ -80,6 +80,8 @@ export function cleanupSessions(): void {
   }
 }
 
+const PIPELINE_FALLBACK = "当前无法生成回复，请稍后重试。";
+
 async function getSummaryState(
   userId: string,
   cp: Checkpointer<SummaryState>,
@@ -132,7 +134,13 @@ export async function processMessage(
 
   // Stage 2: Memory — 使用持久化 checkpointer
   const t2 = Date.now();
-  let prevState = await getSummaryState(userId, cp);
+  let prevState: SummaryState | undefined;
+  try {
+    prevState = await getSummaryState(userId, cp);
+  } catch (err) {
+    log.error("Loading summary state failed, using empty memory:", err);
+    recordPipelineError("summary_state_load_failed");
+  }
   let mem: Awaited<ReturnType<typeof memoryStage>>;
   try {
     mem = await memoryStage(
@@ -155,15 +163,22 @@ export async function processMessage(
 
   // Stage 3-5: 同前
   const t3 = Date.now();
-  const ctxOut = await contextStage({
-    userId, userMessage, profile, config,
-    searchResults: pre.searchResults,
-    memoryContext: mem.memoryContext,
-    learnedInterests: mem.learnedInterests,
-    conversationSummary: mem.conversationSummary,
-    relState: pre.relState,
-    correlationId: cid,
-  });
+  let ctxOut: Awaited<ReturnType<typeof contextStage>>;
+  try {
+    ctxOut = await contextStage({
+      userId, userMessage, profile, config,
+      searchResults: pre.searchResults,
+      memoryContext: mem.memoryContext,
+      learnedInterests: mem.learnedInterests,
+      conversationSummary: mem.conversationSummary,
+      relState: pre.relState,
+      correlationId: cid,
+    });
+  } catch (err) {
+    log.error("Context stage failed, returning fallback:", err);
+    recordPipelineError("context_stage_failed");
+    return [PIPELINE_FALLBACK];
+  }
 
   const t4 = Date.now();
   const gen = await generationStage({
@@ -178,16 +193,23 @@ export async function processMessage(
   });
 
   const t5 = Date.now();
-  const result = await postProcessStage({
-    userId,
-    userMessage,
-    reply: gen.reply,
-    model,
-    config,
-    profile,
-    totalTurns: mem.summaryState.totalTurns,
-    correlationId: cid,
-  });
+  let result: string[];
+  try {
+    result = await postProcessStage({
+      userId,
+      userMessage,
+      reply: gen.reply,
+      model,
+      config,
+      profile,
+      totalTurns: mem.summaryState.totalTurns,
+      correlationId: cid,
+    });
+  } catch (err) {
+    log.error("Post-process stage failed; returning generated reply:", err);
+    recordPipelineError("postprocess_stage_failed");
+    result = splitForChat(gen.reply);
+  }
   const t6 = Date.now();
 
   const totalMs = t6 - t0;
@@ -214,6 +236,12 @@ export async function* processMessageStream(
   const { model, config, profile } = ctx;
   const cp = _getCheckpointer(ctx);
 
+  if (!checkRateLimit(userId)) {
+    log.info(`Rate limited: ${userId}`);
+    yield "消息太快了，让我喘口气吧~";
+    return;
+  }
+
   cleanupSessions();
 
   // Stage 1: PreProcess
@@ -227,23 +255,49 @@ export async function* processMessageStream(
   }
 
   // Stage 2: Memory
-  const prevState = await getSummaryState(userId, cp);
-  const mem = await memoryStage(
-    { userId, userMessage, model, config, correlationId: cid },
-    prevState,
-  );
-  await setSummaryState(userId, mem.summaryState, cp);
+  const prevState = await getSummaryState(userId, cp).catch((err) => {
+    log.error("Loading summary state failed, using empty memory:", err);
+    recordPipelineError("summary_state_load_failed");
+    return undefined;
+  });
+  let mem: Awaited<ReturnType<typeof memoryStage>>;
+  try {
+    mem = await memoryStage(
+      { userId, userMessage, model, config, correlationId: cid },
+      prevState,
+    );
+    await setSummaryState(userId, mem.summaryState, cp);
+  } catch (err) {
+    log.error("Memory stage failed, using empty memory:", err);
+    recordPipelineError("memory_stage_failed");
+    mem = {
+      history: [],
+      memoryContext: { highConfidence: [], mediumConfidence: [] },
+      learnedInterests: [],
+      conversationSummary: undefined,
+      fullHistory: [],
+      summaryState: prevState || { totalTurns: 1, lastSummaryTurn: 0 },
+    };
+  }
 
   // Stage 3: Context
-  const ctxOut = await contextStage({
-    userId, userMessage, profile, config,
-    searchResults: pre.searchResults,
-    memoryContext: mem.memoryContext,
-    learnedInterests: mem.learnedInterests,
-    conversationSummary: mem.conversationSummary,
-    relState: pre.relState,
-    correlationId: cid,
-  });
+  let ctxOut: Awaited<ReturnType<typeof contextStage>>;
+  try {
+    ctxOut = await contextStage({
+      userId, userMessage, profile, config,
+      searchResults: pre.searchResults,
+      memoryContext: mem.memoryContext,
+      learnedInterests: mem.learnedInterests,
+      conversationSummary: mem.conversationSummary,
+      relState: pre.relState,
+      correlationId: cid,
+    });
+  } catch (err) {
+    log.error("Context stage failed, returning fallback:", err);
+    recordPipelineError("context_stage_failed");
+    yield PIPELINE_FALLBACK;
+    return;
+  }
 
   // Stage 4: Generation — 流式
   let reply = "";
@@ -270,7 +324,7 @@ export async function* processMessageStream(
   } catch (err) {
     log.error("Stream generation failed:", err);
     recordPipelineError("stream_generation_failed");
-    const fallback = "呜...刚才走神了，再说一遍好吗？(｡•́︿•̀｡)";
+    const fallback = PIPELINE_FALLBACK;
     reply = fallback;
     yield fallback;
   }
@@ -285,14 +339,19 @@ export async function* processMessageStream(
   }
 
   // Stage 5: PostProcess
-  await postProcessStage({
-    userId,
-    userMessage,
-    reply,
-    model,
-    config,
-    profile,
-    totalTurns: mem.summaryState.totalTurns,
-    correlationId: cid,
-  });
+  try {
+    await postProcessStage({
+      userId,
+      userMessage,
+      reply,
+      model,
+      config,
+      profile,
+      totalTurns: mem.summaryState.totalTurns,
+      correlationId: cid,
+    });
+  } catch (err) {
+    log.error("Post-process stage failed after streaming reply:", err);
+    recordPipelineError("postprocess_stage_failed");
+  }
 }

@@ -31,6 +31,7 @@ describe("updateEmotion", () => {
 
   it("drifts toward tired on long sessions", () => {
     const state = createEmotionState();
+    state.current = "neutral";
     const updated = updateEmotion(state, "日常聊天", 60);
     expect(updated.current).toBe("tired");
   });

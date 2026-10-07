@@ -2,7 +2,7 @@
 
 # @sixtdreamnight/companion-engine
 
-**AI 伴侶核心引擎 — 人格、關係、記憶、安全、訊息管道。**
+**對話伴侶引擎 — 角色設定、關係、記憶、安全與訊息管道。**
 
 驅動 [Yumema](https://github.com/dreamnight16/Yumema)。
 
@@ -21,17 +21,27 @@ npm install @sixtdreamnight/companion-engine
 ## 快速開始
 
 ```typescript
-import { loadConfig, processMessage, processMessageStream } from "@sixtdreamnight/companion-engine";
+import {
+  createAIProvider,
+  loadConfig,
+  loadProfile,
+  processMessage,
+  processMessageStream,
+} from "@sixtdreamnight/companion-engine";
 import "dotenv/config";
 
-const config = loadConfig();
+const config = await loadConfig();
+const profile = await loadProfile();
+if (!profile) throw new Error("缺少 data/profile.json");
+const model = await createAIProvider(config.ai);
+const context = { model, config, profile };
 
 // 標準管道
-const reply = await processMessage("你好！", { userId: "user-1", config });
+const reply = await processMessage("user-1", "你好！", context);
 console.log(reply);
 
 // 串流管道（逐 token 輸出）
-for await (const chunk of processMessageStream("你好！", { userId: "user-1", config })) {
+for await (const chunk of processMessageStream("user-1", "你好！", context)) {
   process.stdout.write(chunk);
 }
 ```
@@ -46,7 +56,7 @@ for await (const chunk of processMessageStream("你好！", { userId: "user-1", 
 | **Emotion** | 狀態化情緒模型 — 7 種情緒 + 機率轉移 |
 | **Relationship** | 好感度系統、關係階段、告白/分手、好感衰減、多角色支援 |
 | **Memory** | 短期/長期記憶、摘要、遺忘曲線、語義檢索 |
-| **Safety** | 多層安全 — Regex/LLM/組合檢查器。角色設定審核 |
+| **Safety** | 預設 Regex 安全檢查，可選注入 LLM/組合檢查器，角色設定審核 |
 | **Scheduler** | 基於 cron 的背景任務排程 |
 | **Search** | 網頁搜尋及聊天歷史搜尋 |
 | **Checkpointer** | 持久化會話狀態（JSON 檔案預設） |
@@ -55,7 +65,7 @@ for await (const chunk of processMessageStream("你好！", { userId: "user-1", 
 | **MBTI** | 對話式 MBTI 推斷 |
 | **Card Import** | SillyTavern V1/V2/V3 + Character.AI 角色卡匯入 |
 
-## 核心特性 (v0.2.0)
+## 核心特性 (v0.5.0)
 
 - **持久化會話**: `JsonCheckpointer` 處理程序重啟不丟失
 - **串流管道**: `processMessageStream()` token 級非同步生成器
@@ -78,6 +88,13 @@ for await (const chunk of processMessageStream("你好！", { userId: "user-1", 
 - `zod` ^3.0.0
 
 完整 API 文件: [API_REFERENCE.md](API_REFERENCE.md)
+
+### 錯誤邊界
+
+模型和備用模型呼叫失敗時會記錄日誌，並返回中性的生成降級文字。記憶或
+後處理失敗不會丟棄已生成的回覆；兩種管道都會記錄失敗階段並繼續返回可用
+結果。`loadConfig()` 或 `createAIProvider()` 的設定和 provider 建立錯誤仍會
+作為明確例外交給呼叫方處理。
 
 ## 授權條款
 

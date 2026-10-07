@@ -2,7 +2,7 @@
 
 # @sixtdreamnight/companion-engine
 
-**AI 伴侣核心引擎 — 人格、关系、记忆、安全、消息管道。**
+**对话伴侣引擎 — 角色设定、关系、记忆、安全与消息管道。**
 
 驱动 [Yumema](https://github.com/dreamnight16/Yumema)。
 
@@ -21,17 +21,27 @@ npm install @sixtdreamnight/companion-engine
 ## 快速开始
 
 ```typescript
-import { loadConfig, processMessage, processMessageStream } from "@sixtdreamnight/companion-engine";
+import {
+  createAIProvider,
+  loadConfig,
+  loadProfile,
+  processMessage,
+  processMessageStream,
+} from "@sixtdreamnight/companion-engine";
 import "dotenv/config";
 
-const config = loadConfig();
+const config = await loadConfig();
+const profile = await loadProfile();
+if (!profile) throw new Error("缺少 data/profile.json");
+const model = await createAIProvider(config.ai);
+const context = { model, config, profile };
 
 // 标准管道
-const reply = await processMessage("你好！", { userId: "user-1", config });
+const reply = await processMessage("user-1", "你好！", context);
 console.log(reply);
 
 // 流式管道（逐 token 输出）
-for await (const chunk of processMessageStream("你好！", { userId: "user-1", config })) {
+for await (const chunk of processMessageStream("user-1", "你好！", context)) {
   process.stdout.write(chunk);
 }
 ```
@@ -46,7 +56,7 @@ for await (const chunk of processMessageStream("你好！", { userId: "user-1", 
 | **Emotion** | 状态化情绪模型 — 7 种情绪 + 概率转移 |
 | **Relationship** | 好感度系统、关系阶段、告白/分手、好感衰减、多角色支持 |
 | **Memory** | 短期/长期记忆、摘要、遗忘曲线、语义检索 |
-| **Safety** | 多层安全 — Regex/LLM/组合检查器。角色设定审核 |
+| **Safety** | 默认 Regex 安全检查，可选注入 LLM/组合检查器，角色设定审核 |
 | **Scheduler** | 基于 cron 的后台任务调度 |
 | **Search** | 网页搜索及聊天历史搜索 |
 | **Checkpointer** | 持久化会话状态（JSON 文件默认） |
@@ -55,7 +65,7 @@ for await (const chunk of processMessageStream("你好！", { userId: "user-1", 
 | **MBTI** | 对话式 MBTI 推断 |
 | **Card Import** | SillyTavern V1/V2/V3 + Character.AI 角色卡导入 |
 
-## 核心特性 (v0.2.0)
+## 核心特性 (v0.5.0)
 
 - **持久化会话**: `JsonCheckpointer` 进程重启不丢失
 - **流式管道**: `processMessageStream()` token 级异步生成器
@@ -64,7 +74,7 @@ for await (const chunk of processMessageStream("你好！", { userId: "user-1", 
 - **多角色关系**: 每个角色独立关系状态
 - **语义记忆**: `TfIdfEmbeddingProvider` 向量检索
 - **Zod 校验**: Profile/AppConfig 运行时类型校验
-- **LLM 安全检查器**: 可选 LLM 安全增强
+- **模型安全检查器**: 可选的模型辅助安全检查
 - **MBTI 推断**: 基于对话推断性格类型
 - **C.AI 导入**: Character.AI 导出格式支持
 
@@ -78,6 +88,13 @@ for await (const chunk of processMessageStream("你好！", { userId: "user-1", 
 - `zod` ^3.0.0
 
 完整 API 文档: [API_REFERENCE.md](API_REFERENCE.md)
+
+### 错误边界
+
+模型和备用模型调用失败时会记录日志，并返回一段中性的备用回复。记忆或
+后处理失败不会丢弃已经生成的回复；两种管道都会记录失败阶段并继续返回可用
+结果。`loadConfig()` 或 `createAIProvider()` 的配置和 provider 创建错误仍会
+作为明确异常交给调用方处理。
 
 ## 许可证
 

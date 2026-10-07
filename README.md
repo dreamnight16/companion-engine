@@ -2,7 +2,7 @@
 
 # @sixtdreamnight/companion-engine
 
-**AI companion core engine — personality, relationship, memory, safety, and pipeline.**
+**Conversation companion engine — profiles, relationships, memory, safety, and message pipelines.**
 
 Powers [Yumema](https://github.com/dreamnight16/Yumema).
 
@@ -21,17 +21,27 @@ npm install @sixtdreamnight/companion-engine
 ## Quick Start
 
 ```typescript
-import { loadConfig, processMessage, processMessageStream } from "@sixtdreamnight/companion-engine";
+import {
+  createAIProvider,
+  loadConfig,
+  loadProfile,
+  processMessage,
+  processMessageStream,
+} from "@sixtdreamnight/companion-engine";
 import "dotenv/config";
 
-const config = loadConfig();
+const config = await loadConfig();
+const profile = await loadProfile();
+if (!profile) throw new Error("Missing data/profile.json");
+const model = await createAIProvider(config.ai);
+const context = { model, config, profile };
 
 // Standard pipeline
-const reply = await processMessage("Hello!", { userId: "user-1", config });
+const reply = await processMessage("user-1", "Hello!", context);
 console.log(reply);
 
 // Streaming pipeline (token-level)
-for await (const chunk of processMessageStream("Hello!", { userId: "user-1", config })) {
+for await (const chunk of processMessageStream("user-1", "Hello!", context)) {
   process.stdout.write(chunk);
 }
 ```
@@ -46,7 +56,7 @@ for await (const chunk of processMessageStream("Hello!", { userId: "user-1", con
 | **Emotion** | Stateful emotion model — 7 emotions with probabilistic transitions |
 | **Relationship** | Affection system, relationship stages, confession/breakup, affection decay, multi-character |
 | **Memory** | Short-term / long-term memory, summarization, forgetting curve, semantic search |
-| **Safety** | Multi-layer safety — regex, LLM-based, composite checker. Profile validation |
+| **Safety** | Regex safety by default, optional injected LLM/composite checker, profile validation |
 | **Scheduler** | Cron-based background task scheduler |
 | **Search** | Web search and conversation history search |
 | **Checkpointer** | Persistent session state (JSON default) |
@@ -55,7 +65,7 @@ for await (const chunk of processMessageStream("Hello!", { userId: "user-1", con
 | **MBTI** | Conversation-based MBTI inference |
 | **Card Import** | SillyTavern V1/V2/V3 + Character.AI character card import |
 
-## Key Features (v0.2.0)
+## Key Features (v0.5.0)
 
 - **Persistent sessions**: `JsonCheckpointer` survives process restarts
 - **Streaming pipeline**: `processMessageStream()` token-level async generator
@@ -91,6 +101,15 @@ copy it to `.env` to get started.
 - `zod` ^3.0.0
 
 Full API docs: [API_REFERENCE.md](API_REFERENCE.md)
+
+### Error boundaries
+
+Provider and backup-model failures are logged and converted to a neutral
+generation fallback. Memory and post-processing failures do not discard an
+already generated reply; the stream and non-stream pipelines record the failed
+stage and continue with the available result. Configuration and provider
+construction errors from `loadConfig()` or `createAIProvider()` remain
+explicit errors for the caller to handle.
 
 ## License
 

@@ -1,4 +1,4 @@
-# API Reference — @sixtdreamnight/companion-engine v0.2.0
+# API Reference — @sixtdreamnight/companion-engine v0.5.0
 
 ## Pipeline
 
@@ -7,6 +7,9 @@
 
 ### `processMessageStream(userId, userMessage, ctx) -> AsyncGenerator<string>`
 流式版本，逐 token yield。前 3 阶段同步，Generation 流式输出，PostProcess 在流结束后保存。
+
+Provider 调用失败时返回中性的降级文本。记忆或后处理失败会记录对应阶段并尽量
+保留已生成的回复；配置加载和 provider 创建错误不会被静默转换。
 
 ### `PipelineContext`
 ```typescript
@@ -140,7 +143,7 @@ class LLMSafetyChecker implements SafetyChecker {
 }
 ```
 
-### CompositeSafetyChecker — 组合（推荐）
+### CompositeSafetyChecker — 可选组合
 ```typescript
 class CompositeSafetyChecker implements SafetyChecker {
   constructor(llmOptions?)  // 先 Regex 快速拦截，再 LLM 判断边界
@@ -150,6 +153,10 @@ class CompositeSafetyChecker implements SafetyChecker {
 ### Legacy functions (from safety.ts)
 `checkInput(msg, level)`, `checkOutput(reply)`, `validateProfile(profile)`,
 `buildRefusalPrompt(nickname, reason)`, `fallbackRefusal()`
+
+`RegexSafetyChecker` is the pipeline-independent default. The LLM and composite
+checkers accept injected functions and are not enabled by the pipeline unless
+the caller wires them explicitly.
 
 ---
 

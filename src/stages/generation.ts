@@ -127,7 +127,7 @@ export async function generationStage(input: GenerationInput): Promise<Generatio
   } catch (err) {
     logger.error("Generation failed, returning fallback:", err);
     recordPipelineError("generation_failed");
-    return { reply: "呜...刚才走神了，再说一遍好吗？(｡•́︿•̀｡)" };
+    return { reply: "当前无法生成回复，请稍后重试。" };
   }
 
   // 2. 输出安全检查

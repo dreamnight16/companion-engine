@@ -1,9 +1,9 @@
 /**
  * LLM-based Safety Checker — 可选的安全增强层。
  *
- * 默认 RegexSafetyChecker 快速但容易被对抗绕过。
- * LLMSafetyChecker 使用便宜模型做裁判，更准确但更慢/更贵。
- * 推荐组合使用：先跑 regex（快速拦截明显违规），再跑 LLM（判断边界情况）。
+ * 默认 RegexSafetyChecker 不调用模型，适合快速拦截明显模式。
+ * LLMSafetyChecker 通过注入的生成函数处理边界情况，但会增加调用延迟和成本。
+ * CompositeSafetyChecker 可先跑 regex，再按需调用 LLM。
  */
 
 import { BLOCKED_PATTERNS, AI_SELF_ID_PATTERN } from "./safety.js";
